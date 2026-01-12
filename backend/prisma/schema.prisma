@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  password      String?
+  provider      String?
+  providerId    String?
+  refreshToken  String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  albums              Album[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@index([email])
+  @@index([provider, providerId])
+  @@map("users")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model Album {
+  id          String    @id @default(uuid())
+  title       String
+  description String?   @db.Text
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shareToken  String?   @unique
+  isPublic    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  photos Photo[]
+
+  @@index([userId])
+  @@index([shareToken])
+  @@map("albums")
+}
+
+model Photo {
+  id              String    @id @default(uuid())
+  title           String
+  description     String?   @db.Text
+  filename        String
+  originalName    String
+  mimeType        String
+  size            Int
+  width           Int?
+  height          Int?
+  dominantColor   String?
+  acquisitionDate DateTime?
+  exifData        Json?
+  s3Key           String
+  albumId         String
+  album           Album     @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  @@index([albumId])
+  @@index([acquisitionDate])
+  @@map("photos")
+}
