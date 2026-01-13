@@ -1,8 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import request from 'supertest'
 import app from '../app.js'
 import { createTestUser } from './helpers.js'
 import prisma from '../config/database.js'
+
+vi.mock('../utils/email.js', () => ({
+  sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
+  sendEmail: vi.fn().mockResolvedValue(undefined)
+}))
 
 describe('Auth Integration Tests', () => {
   beforeEach(async () => {
