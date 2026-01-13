@@ -2,15 +2,6 @@ import { Request, Response, NextFunction } from 'express'
 import { verifyAccessToken } from '../utils/jwt.js'
 import { userRepository } from '../repositories/user.repository.js'
 import { UnauthorizedError } from '../utils/errors.js'
-import { User } from '@prisma/client'
-
-declare global {
-  namespace Express {
-    interface Request {
-      user?: User
-    }
-  }
-}
 
 export async function authMiddleware(req: Request, _res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization

@@ -12,7 +12,7 @@ interface FilePreviewProps {
 }
 
 export default function FilePreview({
-  id,
+  id: _id,
   fileName,
   previewUrl,
   compressedSize,

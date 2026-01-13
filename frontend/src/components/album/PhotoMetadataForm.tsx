@@ -17,7 +17,7 @@ interface PhotoMetadataFormProps {
 
 export default function PhotoMetadataForm({
   fileId,
-  fileName,
+  fileName: _fileName,
   metadata,
   onUpdateMetadata
 }: PhotoMetadataFormProps) {

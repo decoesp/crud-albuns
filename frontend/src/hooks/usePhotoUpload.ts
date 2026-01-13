@@ -43,10 +43,10 @@ export function usePhotoUpload({ albumId, onSuccess }: UsePhotoUploadOptions): U
   const generateUploadUrls = useGenerateBatchUploadUrls()
   const createPhoto = useCreatePhoto()
   const processMetadata = useProcessPhotoMetadata()
+  const workerCompression = useImageCompressionWorker()
 
   const isUploading = generateUploadUrls.isPending || createPhoto.isPending
-
-  const workerCompression = isWorkerSupported() ? useImageCompressionWorker() : null
+  const shouldUseWorker = isWorkerSupported()
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     setUploadingFiles((prev) => [...prev, ...acceptedFiles])
@@ -60,7 +60,7 @@ export function usePhotoUpload({ albumId, onSuccess }: UsePhotoUploadOptions): U
         outputFormat: 'webp' as const
       }
 
-      const results = workerCompression
+      const results = shouldUseWorker && workerCompression
         ? await workerCompression.compressImages(acceptedFiles, compressionOptions)
         : await compressImages(acceptedFiles, compressionOptions)
 
@@ -71,7 +71,7 @@ export function usePhotoUpload({ albumId, onSuccess }: UsePhotoUploadOptions): U
     } finally {
       setIsCompressing(false)
     }
-  }, [workerCompression])
+  }, [workerCompression, shouldUseWorker])
 
   const handleUpload = async () => {
     if (compressedFiles.length === 0) return
