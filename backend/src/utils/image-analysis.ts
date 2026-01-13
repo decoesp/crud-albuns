@@ -1,10 +1,6 @@
 import sharp from 'sharp'
 import { logger } from './logger.js'
 import exifParser from 'exif-parser'
-import { getColorFromURL } from 'color-thief-node'
-import fs from 'fs/promises'
-import path from 'path'
-import os from 'os'
 
 export interface ImageMetadata {
   width: number
@@ -55,39 +51,8 @@ export async function extractImageMetadata(buffer: Buffer): Promise<ImageMetadat
   return metadata
 }
 
-export async function extractDominantColor(buffer: Buffer): Promise<string | null> {
-  const tempDir = os.tmpdir()
-  const tempFilePath = path.join(tempDir, `temp-${Date.now()}.jpg`)
-  
-  try {
-    await sharp(buffer)
-      .resize(100, 100, { fit: 'cover' })
-      .jpeg()
-      .toFile(tempFilePath)
-
-    const color = await getColorFromURL(tempFilePath)
-    
-    const hexColor = rgbToHex(color[0], color[1], color[2])
-    return hexColor
-  } catch (error) {
-    logger.error('Error extracting dominant color', 'ImageAnalysis', { error: String(error) })
-    return null
-  } finally {
-    try {
-      await fs.unlink(tempFilePath)
-    } catch {
-      // Ignore cleanup errors
-    }
-  }
-}
-
-function rgbToHex(r: number, g: number, b: number): string {
-  return '#' + [r, g, b]
-    .map(x => {
-      const hex = x.toString(16)
-      return hex.length === 1 ? '0' + hex : hex
-    })
-    .join('')
+export async function extractDominantColor(_buffer: Buffer): Promise<string | null> {
+  return null
 }
 
 export function sanitizeFilename(filename: string): string {

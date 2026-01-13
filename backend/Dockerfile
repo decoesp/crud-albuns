@@ -10,7 +10,6 @@ RUN npm ci
 COPY . .
 
 RUN npx prisma generate
-RUN npm run build
 
 FROM node:20-alpine AS runner
 
@@ -22,12 +21,13 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 expressjs
 
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src ./src
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/tsconfig.json ./
 
 USER expressjs
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx src/server.ts"]
