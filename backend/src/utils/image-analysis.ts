@@ -51,8 +51,29 @@ export async function extractImageMetadata(buffer: Buffer): Promise<ImageMetadat
   return metadata
 }
 
-export async function extractDominantColor(_buffer: Buffer): Promise<string | null> {
-  return null
+export async function extractDominantColor(buffer: Buffer): Promise<string | null> {
+  try {
+    const image = sharp(buffer)
+    const { dominant } = await image.stats()
+    
+    const r = Math.round(dominant.r)
+    const g = Math.round(dominant.g)
+    const b = Math.round(dominant.b)
+    
+    return rgbToHex(r, g, b)
+  } catch (error) {
+    logger.error('Error extracting dominant color', 'ImageAnalysis', { error: String(error) })
+    return null
+  }
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return '#' + [r, g, b]
+    .map(x => {
+      const hex = x.toString(16)
+      return hex.length === 1 ? '0' + hex : hex
+    })
+    .join('')
 }
 
 export function sanitizeFilename(filename: string): string {

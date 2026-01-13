@@ -2,8 +2,11 @@ import prisma from '../config/database.js'
 import { hashPassword } from '../utils/password.js'
 import { generateTokenPair } from '../utils/jwt.js'
 
+let userCounter = 0
+
 export async function createTestUser(data?: { email?: string; name?: string; password?: string }) {
-  const email = data?.email || `test-${Date.now()}@example.com`
+  const uniqueId = `${Date.now()}-${++userCounter}-${Math.random().toString(36).substring(7)}`
+  const email = data?.email || `test-${uniqueId}@example.com`
   const name = data?.name || 'Test User'
   const password = data?.password || 'Test@123'
 
@@ -18,6 +21,11 @@ export async function createTestUser(data?: { email?: string; name?: string; pas
   })
 
   const tokens = generateTokenPair(user.id, user.email)
+  
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { refreshToken: tokens.refreshToken }
+  })
 
   return { user, tokens, plainPassword: password }
 }
@@ -33,14 +41,15 @@ export async function createTestAlbum(userId: string, data?: { title?: string; d
 }
 
 export async function createTestPhoto(albumId: string, data?: { title?: string }) {
+  const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(7)}`
   return prisma.photo.create({
     data: {
       title: data?.title || 'Test Photo',
-      filename: 'test.jpg',
+      filename: `test-${uniqueId}.jpg`,
       originalName: 'test.jpg',
       mimeType: 'image/jpeg',
       size: 1024,
-      s3Key: `photos/${albumId}/test-${Date.now()}.jpg`,
+      s3Key: `photos/${albumId}/test-${uniqueId}.jpg`,
       albumId
     }
   })

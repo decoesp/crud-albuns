@@ -15,12 +15,17 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
   try {
     const payload = verifyAccessToken(token)
     const user = await userRepository.findById(payload.userId)
-
+    
     if (!user) {
       throw new UnauthorizedError('Usuário não encontrado')
     }
 
-    req.user = user
+    req.user = {
+      id: user.id,
+      userId: user.id,
+      email: user.email,
+      type: payload.type
+    }
     next()
   } catch {
     throw new UnauthorizedError('Token inválido ou expirado')
@@ -41,7 +46,12 @@ export async function optionalAuthMiddleware(req: Request, _res: Response, next:
     const user = await userRepository.findById(payload.userId)
     
     if (user) {
-      req.user = user
+      req.user = {
+        id: user.id,
+        userId: user.id,
+        email: user.email,
+        type: payload.type
+      }
     }
     next()
   } catch {

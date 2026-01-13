@@ -44,7 +44,12 @@ if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_CALLBACK_URL)
             })
           }
 
-          return done(null, user)
+          return done(null, {
+            id: user.id,
+            userId: user.id,
+            email: user.email,
+            type: 'access' as const
+          })
         } catch (error) {
           return done(error as Error)
         }
@@ -93,7 +98,12 @@ if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET && env.GITHUB_CALLBACK_URL)
             })
           }
 
-          return done(null, user)
+          return done(null, {
+            id: user.id,
+            userId: user.id,
+            email: user.email,
+            type: 'access' as const
+          })
         } catch (error) {
           return done(error as Error)
         }

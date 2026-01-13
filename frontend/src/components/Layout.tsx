@@ -21,7 +21,6 @@ export default function Layout() {
               <span className="sm:hidden">Álbuns</span>
             </Link>
 
-            {/* Desktop Menu */}
             <div className="hidden sm:flex items-center gap-4">
               <span className="text-sm text-gray-600">
                 Olá, <span className="font-medium">{user?.name}</span>
@@ -35,7 +34,6 @@ export default function Layout() {
               </button>
             </div>
 
-            {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="sm:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -45,7 +43,6 @@ export default function Layout() {
             </button>
           </div>
 
-          {/* Mobile Menu */}
           <div className={cn(
             'sm:hidden border-t border-gray-200 transition-all duration-200 ease-in-out overflow-hidden',
             isMobileMenuOpen ? 'max-h-32 opacity-100' : 'max-h-0 opacity-0'

@@ -1,21 +1,3 @@
-/**
- * Image Compression Utility
- * 
- * Comprime imagens no client-side antes do upload para reduzir:
- * - Tempo de upload
- * - Uso de banda
- * - Custos de armazenamento S3
- * 
- * Trade-offs documentados:
- * - Qualidade vs Tamanho: Usamos qualidade 0.8 (80%) como padrão, 
- *   oferecendo boa redução de tamanho (~60-70%) com perda visual mínima
- * - Formato: Convertemos para WebP quando suportado (melhor compressão),
- *   com fallback para JPEG
- * - Dimensões: Redimensionamos imagens > 2048px para evitar uploads desnecessários
- * - Processamento: Usa Canvas API (síncrono no main thread), pode causar
- *   pequeno delay em imagens muito grandes. Para produção em escala,
- *   considerar Web Workers ou OffscreenCanvas
- */
 
 export interface CompressionOptions {
   maxWidth?: number
@@ -25,7 +7,7 @@ export interface CompressionOptions {
 }
 
 export interface CompressionResult {
-  id: string // Stable unique identifier for React keys
+  id: string 
   file: File
   originalSize: number
   compressedSize: number

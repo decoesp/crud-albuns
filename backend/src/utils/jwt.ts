@@ -22,7 +22,7 @@ export function generateRefreshToken(userId: string, email: string): string {
   }
 
   return jwt.sign(payload, env.JWT_REFRESH_SECRET, {
-    expiresIn: env.JWT_REFRESH_EXPIRES_IN as string
+    expiresIn: env.JWT_REFRESH_EXPIRES_IN
   })
 }
 

@@ -99,8 +99,7 @@ jobs:
       - run: npx prisma generate
       - run: npx prisma migrate deploy
       - run: npm run test
-      # TODO: Fix integration tests isolation issues
-      # - run: npm run test:integration
+      - run: npm run test:integration
 
   test-frontend:
     name: Frontend Tests

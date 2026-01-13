@@ -60,11 +60,9 @@ export default function UploadModal({
     return now.toISOString().slice(0, 16)
   }, [])
 
-  // Only update preview URLs when file list actually changes
   const currentFileIds = compressedFiles.map(r => r.id).join(',')
   
   if (currentFileIds !== prevFileIdsRef.current) {
-    // Create preview URLs for new files
     compressedFiles.forEach((result) => {
       if (!previewUrlsRef.current.has(result.id)) {
         const url = URL.createObjectURL(result.file)
@@ -72,7 +70,6 @@ export default function UploadModal({
       }
     })
 
-    // Cleanup removed files
     const currentIds = new Set(compressedFiles.map(r => r.id))
     previewUrlsRef.current.forEach((url, id) => {
       if (!currentIds.has(id)) {
