@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Image as ImageIcon, Grid, List } from 'lucide-react'
-import { usePublicAlbum } from '../hooks/useAlbums'
+import { usePublicAlbum } from '../features/album/hooks/useAlbumQueries'
 import Modal from '../components/ui/Modal'
 import { cn, formatFileSize, formatDate, getContrastColor } from '../lib/utils'
 import { Photo } from '../types'

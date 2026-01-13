@@ -1,4 +1,5 @@
 import app from './app.js'
+import { logger } from './utils/logger.js'
 import { env } from './config/env.js'
 import prisma from './config/database.js'
 
@@ -7,15 +8,14 @@ const PORT = env.PORT
 async function main() {
   try {
     await prisma.$connect()
-    console.log('✅ Database connected')
+    logger.info('Database connected', 'Server')
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`)
-      console.log(`📚 API docs: http://localhost:${PORT}/api/health`)
-      console.log(`🌍 Environment: ${env.NODE_ENV}`)
+      logger.info(`Server running on http://localhost:${PORT}`, 'Server')
+      logger.info(`Environment: ${env.NODE_ENV}`, 'Server')
     })
   } catch (error) {
-    console.error('❌ Failed to start server:', error)
+    logger.error('Failed to start server', 'Server', { error: String(error) })
     process.exit(1)
   }
 }

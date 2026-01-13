@@ -25,6 +25,7 @@ export interface CompressionOptions {
 }
 
 export interface CompressionResult {
+  id: string // Stable unique identifier for React keys
   file: File
   originalSize: number
   compressedSize: number
@@ -113,6 +114,7 @@ export async function compressImage(
           )
 
           resolve({
+            id: crypto.randomUUID(),
             file: compressedFile,
             originalSize: file.size,
             compressedSize: blob.size,
@@ -154,6 +156,7 @@ export async function compressImages(
     } catch (error) {
       console.error(`Failed to compress ${file.name}:`, error)
       results.push({
+        id: crypto.randomUUID(),
         file,
         originalSize: file.size,
         compressedSize: file.size,

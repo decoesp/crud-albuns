@@ -4,6 +4,7 @@ import { passwordResetRepository } from '../repositories/password-reset.reposito
 import { hashPassword, comparePassword } from '../utils/password.js'
 import { generateTokenPair, verifyRefreshToken } from '../utils/jwt.js'
 import { sendPasswordResetEmail } from '../utils/email.js'
+import { logger } from '../utils/logger.js'
 import { BadRequestError, UnauthorizedError, ConflictError, NotFoundError } from '../utils/errors.js'
 import { RegisterInput, LoginInput, ForgotPasswordInput, ResetPasswordInput } from '../schemas/auth.schema.js'
 
@@ -93,7 +94,7 @@ export const authService = {
     await passwordResetRepository.create(user.id, token, expiresAt)
     await sendPasswordResetEmail(user.email, token, user.name)
 
-    console.info(`[AUTH] Password reset requested for user ${user.id}`)
+    logger.info('Password reset requested', 'Auth', { userId: user.id })
 
     return { message: 'Se o email existir, você receberá um link de recuperação' }
   },
@@ -114,7 +115,7 @@ export const authService = {
     await passwordResetRepository.markAsUsed(resetToken.id)
     await userRepository.updateRefreshToken(user.id, null)
 
-    console.info(`[AUTH] Password reset completed for user ${user.id}`)
+    logger.info('Password reset completed', 'Auth', { userId: user.id })
 
     return { message: 'Senha alterada com sucesso' }
   },

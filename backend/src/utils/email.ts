@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer'
+import { logger } from './logger.js'
 import { env } from '../config/env.js'
 
 interface EmailOptions {
@@ -20,8 +21,7 @@ const transporter = env.SMTP_HOST
 
 export async function sendEmail(options: EmailOptions): Promise<void> {
   if (!transporter) {
-    console.warn('[EMAIL] SMTP not configured. Email not sent:', options.subject)
-    console.info('[EMAIL] Would send to:', options.to)
+    logger.warn('SMTP not configured. Email not sent', 'Email', { subject: options.subject, to: options.to })
     return
   }
 

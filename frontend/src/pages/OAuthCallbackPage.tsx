@@ -13,7 +13,7 @@ export default function OAuthCallbackPage() {
 
     if (accessToken && refreshToken) {
       setTokens(accessToken, refreshToken)
-      window.location.href = '/albums'
+      navigate('/albums', { replace: true })
     } else {
       navigate('/login?error=oauth')
     }

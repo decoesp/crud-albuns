@@ -3,6 +3,7 @@ import { Outlet, Link } from 'react-router-dom'
 import { LogOut, Image, Menu, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { cn } from '../lib/utils'
+import SkipLink from './ui/SkipLink'
 
 export default function Layout() {
   const { user, logout } = useAuth()
@@ -10,7 +11,8 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+      <SkipLink href="#main-content">Pular para o conteúdo principal</SkipLink>
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-30" role="banner">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-14 sm:h-16">
             <Link to="/albums" className="flex items-center gap-2 text-lg sm:text-xl font-bold text-primary-600">
@@ -67,7 +69,7 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+      <main id="main-content" className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8" role="main">
         <Outlet />
       </main>
     </div>

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import { AppError } from '../utils/errors.js'
+import { logger } from '../utils/logger.js'
 import { env } from '../config/env.js'
 
 export function errorHandler(
@@ -15,7 +16,7 @@ export function errorHandler(
     })
   }
 
-  console.error('[ERROR]', error)
+  logger.error(error.message || 'Unknown error', 'ErrorHandler', { stack: error.stack })
 
   if (env.NODE_ENV === 'development') {
     return res.status(500).json({

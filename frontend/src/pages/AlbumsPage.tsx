@@ -1,26 +1,20 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Plus, Grid, List, Share2, Trash2, Edit, Image as ImageIcon } from 'lucide-react'
-import { useAlbums, useCreateAlbum, useDeleteAlbum, useToggleShareAlbum } from '../hooks/useAlbums'
+import { Plus, Grid, List, Image as ImageIcon } from 'lucide-react'
+import { useAlbums } from '../features/album/hooks/useAlbumQueries'
+import { useCreateAlbum, useDeleteAlbum, useToggleShareAlbum } from '../features/album/hooks/useAlbumMutations'
 import Button from '../components/ui/Button'
-import Modal from '../components/ui/Modal'
-import Input from '../components/ui/Input'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
+import AlbumCard from '../components/album/AlbumCard'
+import AlbumListItem from '../components/album/AlbumListItem'
+import CreateAlbumModal from '../components/album/CreateAlbumModal'
 import { cn } from '../lib/utils'
+import { Album } from '../types'
 import toast from 'react-hot-toast'
-
-const createAlbumSchema = z.object({
-  title: z.string().min(1, 'Título é obrigatório').max(200),
-  description: z.string().max(2000).optional()
-})
-
-type CreateAlbumForm = z.infer<typeof createAlbumSchema>
 
 export default function AlbumsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null)
   const [page, setPage] = useState(1)
 
   const { data, isLoading } = useAlbums({ page, limit: 12 })
@@ -28,24 +22,24 @@ export default function AlbumsPage() {
   const deleteAlbum = useDeleteAlbum()
   const toggleShare = useToggleShareAlbum()
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateAlbumForm>({
-    resolver: zodResolver(createAlbumSchema)
-  })
-
-  const onCreateSubmit = async (formData: CreateAlbumForm) => {
-    await createAlbum.mutateAsync(formData)
+  const onCreateSubmit = async (data: { title: string; description?: string }) => {
+    await createAlbum.mutateAsync(data)
     setIsCreateModalOpen(false)
-    reset()
   }
 
-  const handleDelete = async (id: string, title: string) => {
-    if (confirm(`Tem certeza que deseja excluir o álbum "${title}"?`)) {
-      await deleteAlbum.mutateAsync(id)
+  const handleDeleteClick = (album: Album) => {
+    setDeleteConfirm({ id: album.id, title: album.title })
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (deleteConfirm) {
+      await deleteAlbum.mutateAsync(deleteConfirm.id)
+      setDeleteConfirm(null)
     }
   }
 
-  const handleShare = async (id: string, isPublic: boolean) => {
-    const result = await toggleShare.mutateAsync({ id, isPublic: !isPublic })
+  const handleShare = async (album: Album) => {
+    const result = await toggleShare.mutateAsync({ id: album.id, isPublic: !album.isPublic })
     if (result.shareToken) {
       const shareUrl = `${window.location.origin}/public/albums/${result.shareToken}`
       navigator.clipboard.writeText(shareUrl)
@@ -103,85 +97,37 @@ export default function AlbumsPage() {
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           {data?.data.map((album) => (
-            <div key={album.id} className="card group">
-              <Link to={`/albums/${album.id}`}>
-                <div className="aspect-video bg-gray-100 relative overflow-hidden">
-                  {album.coverUrl ? (
-                    <img src={album.coverUrl} alt={album.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ImageIcon className="w-12 h-12 text-gray-300" />
-                    </div>
-                  )}
-                  {album.isPublic && (
-                    <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
-                      Público
-                    </div>
-                  )}
-                </div>
-              </Link>
-              <div className="p-4">
-                <Link to={`/albums/${album.id}`}>
-                  <h3 className="font-semibold text-gray-900 truncate">{album.title}</h3>
-                  <p className="text-sm text-gray-500 truncate">{album.description || 'Sem descrição'}</p>
-                  <p className="text-xs text-gray-400 mt-1">{album.photoCount} fotos</p>
-                </Link>
-                <div className="flex items-center gap-2 mt-3 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => handleShare(album.id, album.isPublic)}
-                    className="p-1.5 hover:bg-gray-100 rounded"
-                    title={album.isPublic ? 'Desativar compartilhamento' : 'Compartilhar'}
-                  >
-                    <Share2 className={cn('w-4 h-4', album.isPublic ? 'text-green-600' : 'text-gray-500')} />
-                  </button>
-                  <Link to={`/albums/${album.id}`} className="p-1.5 hover:bg-gray-100 rounded">
-                    <Edit className="w-4 h-4 text-gray-500" />
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(album.id, album.title)}
-                    className="p-1.5 hover:bg-gray-100 rounded"
-                    title="Excluir"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </button>
-                </div>
-              </div>
-            </div>
+            <AlbumCard
+              key={album.id}
+              album={album}
+              onShare={handleShare}
+              onDelete={handleDeleteClick}
+            />
           ))}
         </div>
       ) : (
-        <div className="card divide-y">
-          {data?.data.map((album) => (
-            <div key={album.id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-gray-50">
-              <Link to={`/albums/${album.id}`} className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                {album.coverUrl ? (
-                  <img src={album.coverUrl} alt={album.title} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ImageIcon className="w-6 h-6 sm:w-8 sm:h-8 text-gray-300" />
-                  </div>
-                )}
-              </Link>
-              <div className="flex-1 min-w-0">
-                <Link to={`/albums/${album.id}`}>
-                  <h3 className="text-sm sm:text-base font-semibold text-gray-900">{album.title}</h3>
-                  <p className="text-xs sm:text-sm text-gray-500 truncate">{album.description || 'Sem descrição'}</p>
-                  <p className="text-xs text-gray-400 mt-1">{album.photoCount} fotos</p>
-                </Link>
-              </div>
-              <div className="flex items-center gap-1 sm:gap-2">
-                {album.isPublic && (
-                  <span className="hidden sm:inline-block bg-green-100 text-green-700 text-xs px-2 py-1 rounded">Público</span>
-                )}
-                <button onClick={() => handleShare(album.id, album.isPublic)} className="p-2 hover:bg-gray-100 rounded">
-                  <Share2 className={cn('w-4 h-4', album.isPublic ? 'text-green-600' : 'text-gray-500')} />
-                </button>
-                <button onClick={() => handleDelete(album.id, album.title)} className="p-2 hover:bg-gray-100 rounded">
-                  <Trash2 className="w-4 h-4 text-red-500" />
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="card overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-600">Álbum</th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-600">Fotos</th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-600">Criado em</th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-600">Status</th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-600">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data?.data.map((album) => (
+                <AlbumListItem
+                  key={album.id}
+                  album={album}
+                  onShare={handleShare}
+                  onDelete={handleDeleteClick}
+                />
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -199,27 +145,24 @@ export default function AlbumsPage() {
         </div>
       )}
 
-      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Criar novo álbum">
-        <form onSubmit={handleSubmit(onCreateSubmit)} className="space-y-4">
-          <Input id="title" label="Título" placeholder="Nome do álbum" error={errors.title?.message} {...register('title')} />
-          <div>
-            <label className="label">Descrição</label>
-            <textarea
-              className="input min-h-[100px]"
-              placeholder="Descrição do álbum (opcional)"
-              {...register('description')}
-            />
-          </div>
-          <div className="flex gap-3 justify-end">
-            <Button type="button" variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
-              Fechar
-            </Button>
-            <Button type="submit" isLoading={createAlbum.isPending}>
-              Concluir
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      <CreateAlbumModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={onCreateSubmit}
+        isLoading={createAlbum.isPending}
+      />
+
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Excluir álbum"
+        message={`Tem certeza que deseja excluir o álbum "${deleteConfirm?.title}"? Esta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={deleteAlbum.isPending}
+      />
     </div>
   )
 }

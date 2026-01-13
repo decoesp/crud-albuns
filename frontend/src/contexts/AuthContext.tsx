@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import api from '../lib/api'
+import { tokenStorage } from '../lib/tokenStorage'
 import { User, AuthResponse } from '../types'
 
 interface AuthContextType {
@@ -23,15 +24,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await api.get<User>('/auth/profile')
       setUser(response.data)
     } catch {
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
+      tokenStorage.clearTokens()
       setUser(null)
     }
   }, [])
 
   useEffect(() => {
-    const accessToken = localStorage.getItem('accessToken')
-    if (accessToken) {
+    if (tokenStorage.hasTokens()) {
       fetchProfile().finally(() => setIsLoading(false))
     } else {
       setIsLoading(false)
@@ -39,8 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchProfile])
 
   const setTokens = useCallback((accessToken: string, refreshToken: string) => {
-    localStorage.setItem('accessToken', accessToken)
-    localStorage.setItem('refreshToken', refreshToken)
+    tokenStorage.setTokens(accessToken, refreshToken)
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
@@ -59,8 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api.post('/auth/logout')
     } finally {
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
+      tokenStorage.clearTokens()
       setUser(null)
     }
   }, [])

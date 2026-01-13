@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
+import { tokenStorage } from './tokenStorage'
 
 const api = axios.create({
   baseURL: '/api',
@@ -25,7 +26,7 @@ const processQueue = (error: Error | null, token: string | null = null) => {
 }
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = localStorage.getItem('accessToken')
+  const token = tokenStorage.getAccessToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -52,11 +53,10 @@ api.interceptors.response.use(
       originalRequest._retry = true
       isRefreshing = true
 
-      const refreshToken = localStorage.getItem('refreshToken')
+      const refreshToken = tokenStorage.getRefreshToken()
 
       if (!refreshToken) {
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
+        tokenStorage.clearTokens()
         window.location.href = '/login'
         return Promise.reject(error)
       }
@@ -65,16 +65,14 @@ api.interceptors.response.use(
         const response = await axios.post('/api/auth/refresh', { refreshToken })
         const { accessToken, refreshToken: newRefreshToken } = response.data
 
-        localStorage.setItem('accessToken', accessToken)
-        localStorage.setItem('refreshToken', newRefreshToken)
+        tokenStorage.setTokens(accessToken, newRefreshToken)
 
         processQueue(null, accessToken)
         originalRequest.headers.Authorization = `Bearer ${accessToken}`
         return api(originalRequest)
       } catch (refreshError) {
         processQueue(refreshError as Error, null)
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
+        tokenStorage.clearTokens()
         window.location.href = '/login'
         return Promise.reject(refreshError)
       } finally {

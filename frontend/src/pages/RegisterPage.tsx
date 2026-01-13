@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Image } from 'lucide-react'
+import { Image, Check, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
@@ -26,10 +26,19 @@ type RegisterForm = z.infer<typeof registerSchema>
 export default function RegisterPage() {
   const { register: registerUser } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
+  const [password, setPassword] = useState('')
 
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema)
   })
+
+  const passwordRequirements = [
+    { label: 'Pelo menos 8 caracteres', test: (pwd: string) => pwd.length >= 8 },
+    { label: 'Uma letra maiúscula', test: (pwd: string) => /[A-Z]/.test(pwd) },
+    { label: 'Uma letra minúscula', test: (pwd: string) => /[a-z]/.test(pwd) },
+    { label: 'Um número', test: (pwd: string) => /\d/.test(pwd) },
+    { label: 'Um caractere especial (@$!%*?&)', test: (pwd: string) => /[@$!%*?&]/.test(pwd) }
+  ]
 
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true)
@@ -74,14 +83,40 @@ export default function RegisterPage() {
               {...register('email')}
             />
 
-            <Input
-              id="password"
-              type="password"
-              label="Senha"
-              placeholder="••••••••"
-              error={errors.password?.message}
-              {...register('password')}
-            />
+            <div>
+              <Input
+                id="password"
+                type="password"
+                label="Senha"
+                placeholder="••••••••"
+                error={errors.password?.message}
+                {...register('password', {
+                  onChange: (e) => setPassword(e.target.value)
+                })}
+              />
+              {password && (
+                <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs font-medium text-gray-700 mb-2">Requisitos da senha:</p>
+                  <ul className="space-y-1">
+                    {passwordRequirements.map((req, index) => {
+                      const isValid = req.test(password)
+                      return (
+                        <li key={index} className="flex items-center gap-2 text-xs">
+                          {isValid ? (
+                            <Check className="w-3 h-3 text-green-600" aria-hidden="true" />
+                          ) : (
+                            <X className="w-3 h-3 text-gray-400" aria-hidden="true" />
+                          )}
+                          <span className={isValid ? 'text-green-700' : 'text-gray-600'}>
+                            {req.label}
+                          </span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              )}
+            </div>
 
             <div className="flex gap-3">
               <Link to="/login" className="flex-1">

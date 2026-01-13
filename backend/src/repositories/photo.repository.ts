@@ -22,6 +22,9 @@ export interface UpdatePhotoData {
   description?: string
   dominantColor?: string
   acquisitionDate?: Date
+  width?: number
+  height?: number
+  exifData?: Prisma.JsonValue
 }
 
 export interface ListPhotosParams {

@@ -6,6 +6,13 @@ import { ForbiddenError, NotFoundError } from '../utils/errors.js'
 import { CreatePhotoInput, UpdatePhotoInput, ListPhotosQuery, UploadUrlInput, BatchUploadUrlInput } from '../schemas/photo.schema.js'
 import { PaginatedResponse, UploadUrlResponse } from '../types/index.js'
 import { extractImageMetadata, extractTitleFromFilename } from '../utils/image-analysis.js'
+import { logger } from '../utils/logger.js'
+import { Photo, Prisma } from '@prisma/client'
+import { parseAndValidateAcquisitionDate } from '../domain/photo/validators.js'
+
+interface PhotoWithUrl extends Photo {
+  url: string
+}
 
 export const photoService = {
   async generateUploadUrl(userId: string, albumId: string, data: UploadUrlInput): Promise<UploadUrlResponse> {
@@ -68,15 +75,14 @@ export const photoService = {
     }
 
     const title = data.title || extractTitleFromFilename(data.originalName)
-    const acquisitionDate = data.acquisitionDate 
-      ? new Date(data.acquisitionDate as string) 
-      : new Date()
+    const acquisitionDate = parseAndValidateAcquisitionDate(data.acquisitionDate as string | undefined)
 
     const photo = await photoRepository.create({
       ...data,
       title,
       albumId,
-      acquisitionDate
+      acquisitionDate,
+      exifData: data.exifData as Prisma.JsonValue | undefined
     })
 
     return {
@@ -103,7 +109,7 @@ export const photoService = {
       const imageBuffer = await getObject(photo.s3Key)
       const metadata = await extractImageMetadata(imageBuffer)
 
-      const updateData: Partial<CreatePhotoInput> = {}
+      const updateData: Parameters<typeof photoRepository.update>[1] = {}
 
       if (metadata.width) updateData.width = metadata.width
       if (metadata.height) updateData.height = metadata.height
@@ -111,7 +117,7 @@ export const photoService = {
         updateData.dominantColor = metadata.dominantColor
       }
       if (metadata.acquisitionDate && !photo.acquisitionDate) {
-        updateData.acquisitionDate = metadata.acquisitionDate as unknown as string
+        updateData.acquisitionDate = new Date(metadata.acquisitionDate)
       }
       if (metadata.exifData) {
         updateData.exifData = metadata.exifData
@@ -124,12 +130,12 @@ export const photoService = {
         url: await generateDownloadUrl(updatedPhoto.s3Key)
       }
     } catch (error) {
-      console.error('Error processing metadata:', error)
+      logger.error('Error processing metadata', 'PhotoService', { error: String(error) })
       throw new Error('Falha ao processar metadados da imagem')
     }
   },
 
-  async list(userId: string, albumId: string, query: ListPhotosQuery): Promise<PaginatedResponse<unknown>> {
+  async list(userId: string, albumId: string, query: ListPhotosQuery): Promise<PaginatedResponse<PhotoWithUrl>> {
     const album = await albumRepository.findById(albumId)
     if (!album) {
       throw new NotFoundError('Álbum não encontrado')
@@ -203,9 +209,13 @@ export const photoService = {
       throw new NotFoundError('Foto não pertence a este álbum')
     }
 
+    const acquisitionDate = data.acquisitionDate 
+      ? parseAndValidateAcquisitionDate(data.acquisitionDate as string)
+      : undefined
+
     return photoRepository.update(photoId, {
       ...data,
-      acquisitionDate: data.acquisitionDate ? new Date(data.acquisitionDate as string) : undefined
+      acquisitionDate
     })
   },
 

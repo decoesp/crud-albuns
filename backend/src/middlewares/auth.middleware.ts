@@ -36,7 +36,7 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
   }
 }
 
-export function optionalAuthMiddleware(req: Request, _res: Response, next: NextFunction) {
+export async function optionalAuthMiddleware(req: Request, _res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -47,12 +47,12 @@ export function optionalAuthMiddleware(req: Request, _res: Response, next: NextF
 
   try {
     const payload = verifyAccessToken(token)
-    userRepository.findById(payload.userId).then((user) => {
-      if (user) {
-        req.user = user
-      }
-      next()
-    })
+    const user = await userRepository.findById(payload.userId)
+    
+    if (user) {
+      req.user = user
+    }
+    next()
   } catch {
     next()
   }

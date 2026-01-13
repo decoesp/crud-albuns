@@ -76,8 +76,8 @@ describe('AuthService', () => {
       vi.mocked(userRepository.findByEmail).mockResolvedValue(null)
 
       await expect(
-        authService.login({ email: 'test@example.com', password: 'wrong' })
-      ).rejects.toThrow(UnauthorizedError)
+        authService.login({ email: 'test@example.com', password: 'password' })
+      ).rejects.toBeInstanceOf(UnauthorizedError)
     })
 
     it('should throw UnauthorizedError for wrong password', async () => {
@@ -87,7 +87,7 @@ describe('AuthService', () => {
 
       await expect(
         authService.login({ email: 'test@example.com', password: 'wrong' })
-      ).rejects.toThrow(UnauthorizedError)
+      ).rejects.toBeInstanceOf(UnauthorizedError)
     })
   })
 
@@ -139,7 +139,7 @@ describe('AuthService', () => {
 
       await expect(
         authService.resetPassword({ token: 'invalid', password: 'NewPass@123' })
-      ).rejects.toThrow(BadRequestError)
+      ).rejects.toBeInstanceOf(BadRequestError)
     })
   })
 })

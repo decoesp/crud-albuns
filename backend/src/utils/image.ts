@@ -1,4 +1,5 @@
 import sharp from 'sharp'
+import { logger } from './logger.js'
 import ExifParser from 'exif-parser'
 import { PhotoMetadata } from '../types/index.js'
 
@@ -10,25 +11,26 @@ export async function extractImageMetadata(buffer: Buffer): Promise<PhotoMetadat
     metadata.width = sharpMetadata.width
     metadata.height = sharpMetadata.height
   } catch {
-    console.warn('[IMAGE] Could not extract dimensions')
+    logger.warn('Could not extract dimensions', 'Image')
   }
 
   try {
     metadata.dominantColor = await extractDominantColor(buffer)
   } catch {
-    console.warn('[IMAGE] Could not extract dominant color')
+    logger.warn('Could not extract dominant color', 'Image')
   }
 
   try {
     const exifData = extractExifData(buffer)
     if (exifData) {
       metadata.exifData = exifData.tags as Record<string, unknown>
-      if (exifData.tags?.DateTimeOriginal) {
-        metadata.acquisitionDate = new Date(exifData.tags.DateTimeOriginal * 1000)
+      const dateTime = exifData.tags?.DateTimeOriginal
+      if (typeof dateTime === 'number') {
+        metadata.acquisitionDate = new Date(dateTime * 1000)
       }
     }
   } catch {
-    console.warn('[IMAGE] Could not extract EXIF data')
+    logger.warn('Could not extract EXIF data', 'Image')
   }
 
   return metadata

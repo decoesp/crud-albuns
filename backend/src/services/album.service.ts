@@ -1,21 +1,62 @@
 import { v4 as uuidv4 } from 'uuid'
 import { albumRepository } from '../repositories/album.repository.js'
 import { generateDownloadUrl } from '../config/s3.js'
-import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors.js'
 import { CreateAlbumInput, UpdateAlbumInput, ListAlbumsQuery } from '../schemas/album.schema.js'
 import { PaginatedResponse } from '../types/index.js'
+import { AlbumListItem, AlbumWithPhotos } from '../domain/album/types.js'
+import {
+  ensureAlbumExists,
+  ensureAlbumOwnership,
+  ensureCanDeleteAlbum,
+  toAlbumListItem,
+  toAlbumDetail,
+  buildShareUpdate,
+  toShareResult,
+  buildPaginatedResponse
+} from '../domain/album/operations.js'
+
+const toAlbumWithPhotosFromRepo = (album: {
+  id: string
+  title: string
+  description: string | null
+  userId: string
+  shareToken: string | null
+  isPublic: boolean
+  createdAt: Date
+  updatedAt: Date
+  deletedAt: Date | null
+  photos: { s3Key: string }[]
+  _count: { photos: number }
+}): AlbumWithPhotos => ({
+  id: album.id,
+  title: album.title,
+  description: album.description,
+  userId: album.userId,
+  shareToken: album.shareToken,
+  isPublic: album.isPublic,
+  createdAt: album.createdAt,
+  updatedAt: album.updatedAt,
+  deletedAt: album.deletedAt,
+  photos: album.photos.map((p) => ({ id: '', s3Key: p.s3Key })),
+  photoCount: album._count.photos
+})
+
+const enrichAlbumWithCover = async (
+  album: AlbumWithPhotos,
+  generateUrl: (key: string) => Promise<string>
+): Promise<AlbumListItem> => {
+  const coverUrl = album.photos[0]?.s3Key
+    ? await generateUrl(album.photos[0].s3Key)
+    : null
+  return toAlbumListItem(album, coverUrl)
+}
 
 export const albumService = {
   async create(userId: string, data: CreateAlbumInput) {
-    const album = await albumRepository.create({
-      ...data,
-      userId
-    })
-
-    return album
+    return albumRepository.create({ ...data, userId })
   },
 
-  async list(userId: string, query: ListAlbumsQuery): Promise<PaginatedResponse<unknown>> {
+  async list(userId: string, query: ListAlbumsQuery): Promise<PaginatedResponse<AlbumListItem>> {
     const { albums, total } = await albumRepository.findByUserId({
       userId,
       page: query.page,
@@ -25,68 +66,28 @@ export const albumService = {
       search: query.search
     })
 
+    const domainAlbums = albums.map(toAlbumWithPhotosFromRepo)
     const albumsWithCover = await Promise.all(
-      albums.map(async (album) => {
-        let coverUrl = null
-        if (album.photos[0]?.s3Key) {
-          coverUrl = await generateDownloadUrl(album.photos[0].s3Key)
-        }
-        return {
-          id: album.id,
-          title: album.title,
-          description: album.description,
-          photoCount: album._count.photos,
-          coverUrl,
-          isPublic: album.isPublic,
-          shareToken: album.shareToken,
-          createdAt: album.createdAt,
-          updatedAt: album.updatedAt
-        }
-      })
+      domainAlbums.map((album) => enrichAlbumWithCover(album, generateDownloadUrl))
     )
 
-    const totalPages = Math.ceil(total / query.limit)
-
-    return {
-      data: albumsWithCover,
-      meta: {
-        total,
-        page: query.page,
-        limit: query.limit,
-        totalPages,
-        hasNext: query.page < totalPages,
-        hasPrev: query.page > 1
-      }
-    }
+    return buildPaginatedResponse(albumsWithCover, total, query.page, query.limit)
   },
 
   async getById(userId: string, albumId: string) {
-    const album = await albumRepository.findByIdWithPhotos(albumId)
-    if (!album) {
-      throw new NotFoundError('Álbum não encontrado')
-    }
+    const album = ensureAlbumOwnership(
+      ensureAlbumExists(await albumRepository.findByIdWithPhotos(albumId)),
+      userId
+    )
 
-    if (album.userId !== userId) {
-      throw new ForbiddenError('Acesso negado')
-    }
-
-    return {
-      id: album.id,
-      title: album.title,
-      description: album.description,
-      photoCount: album._count.photos,
-      isPublic: album.isPublic,
-      shareToken: album.shareToken,
-      createdAt: album.createdAt,
-      updatedAt: album.updatedAt
-    }
+    return toAlbumDetail(toAlbumWithPhotosFromRepo(album))
   },
 
   async getByShareToken(shareToken: string) {
-    const album = await albumRepository.findByShareToken(shareToken)
-    if (!album) {
-      throw new NotFoundError('Álbum não encontrado ou não é público')
-    }
+    const album = ensureAlbumExists(
+      await albumRepository.findByShareToken(shareToken),
+      'Álbum não encontrado ou não é público'
+    )
 
     const photosWithUrls = await Promise.all(
       album.photos.map(async (photo) => ({
@@ -105,56 +106,35 @@ export const albumService = {
   },
 
   async update(userId: string, albumId: string, data: UpdateAlbumInput) {
-    const album = await albumRepository.findById(albumId)
-    if (!album) {
-      throw new NotFoundError('Álbum não encontrado')
-    }
-
-    if (album.userId !== userId) {
-      throw new ForbiddenError('Acesso negado')
-    }
+    ensureAlbumOwnership(
+      ensureAlbumExists(await albumRepository.findById(albumId)),
+      userId
+    )
 
     return albumRepository.update(albumId, data)
   },
 
   async delete(userId: string, albumId: string) {
-    const album = await albumRepository.findById(albumId)
-    if (!album) {
-      throw new NotFoundError('Álbum não encontrado')
-    }
-
-    if (album.userId !== userId) {
-      throw new ForbiddenError('Acesso negado')
-    }
+    ensureAlbumOwnership(
+      ensureAlbumExists(await albumRepository.findById(albumId)),
+      userId
+    )
 
     const hasPhotos = await albumRepository.hasActivePhotos(albumId)
-    if (hasPhotos) {
-      throw new BadRequestError('Não é possível excluir um álbum que contém fotos. Remova todas as fotos primeiro.')
-    }
+    ensureCanDeleteAlbum(hasPhotos)
 
     return albumRepository.softDelete(albumId)
   },
 
   async toggleShare(userId: string, albumId: string, isPublic: boolean) {
-    const album = await albumRepository.findById(albumId)
-    if (!album) {
-      throw new NotFoundError('Álbum não encontrado')
-    }
+    const album = ensureAlbumOwnership(
+      ensureAlbumExists(await albumRepository.findById(albumId)),
+      userId
+    )
 
-    if (album.userId !== userId) {
-      throw new ForbiddenError('Acesso negado')
-    }
+    const shareUpdate = buildShareUpdate(isPublic, album.shareToken, uuidv4)
+    const updatedAlbum = await albumRepository.update(albumId, shareUpdate)
 
-    const shareToken = isPublic ? (album.shareToken || uuidv4()) : null
-
-    const updatedAlbum = await albumRepository.update(albumId, {
-      isPublic,
-      shareToken
-    })
-
-    return {
-      isPublic: updatedAlbum.isPublic,
-      shareToken: updatedAlbum.shareToken
-    }
+    return toShareResult(updatedAlbum)
   }
 }
