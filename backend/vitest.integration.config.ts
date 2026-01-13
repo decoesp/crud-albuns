@@ -8,6 +8,12 @@ export default defineConfig({
     setupFiles: ['src/tests/setup.ts'],
     testTimeout: 30000,
     hookTimeout: 30000,
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true
+      }
+    },
     server: {
       deps: {
         inline: ['color-thief-node']
