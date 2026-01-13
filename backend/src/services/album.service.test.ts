@@ -33,6 +33,7 @@ describe('AlbumService', () => {
         id: '1',
         title: 'Test',
         userId: 'user1',
+        photos: [],
         _count: { photos: 5 }
       }
       vi.mocked(albumRepository.findByIdWithPhotos).mockResolvedValue(mockAlbum as never)
