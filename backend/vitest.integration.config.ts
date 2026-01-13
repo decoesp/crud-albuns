@@ -7,6 +7,11 @@ export default defineConfig({
     include: ['src/**/*.integration.test.ts'],
     setupFiles: ['src/tests/setup.ts'],
     testTimeout: 30000,
-    hookTimeout: 30000
+    hookTimeout: 30000,
+    server: {
+      deps: {
+        inline: ['color-thief-node']
+      }
+    }
   }
 })
